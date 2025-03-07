@@ -2,6 +2,21 @@
 
 require './config/database_access.php';
 
+function CheckId($id) {
+    global $connection;
+    $query = $connection->prepare("SELECT * FROM user WHERE id = ?");
+    $query->execute([$id]);
+    $data = $query->fetch(PDO::FETCH_ASSOC);
+    if(!$data) {
+        return "false";
+    }
+    else {
+        return "true";
+    }
+}
+
+// test
+// echo CheckId("3") === "true" ? "done" : "false";   
 
 if($method  === "GET") {
     if($id && $id !== 0) {
@@ -46,10 +61,8 @@ elseif($method === "POST") {
 elseif($method === "PUT") {
     $Datarequest = file_get_contents("php://input");
     $dataJson = json_decode($Datarequest, true);
-    $check2 = $connection->prepare("SELECT * FROM user WHERE id = ?");
-    $check2->execute([$dataJson["id"]]);
-    $data = $check2->fetch(PDO::FETCH_ASSOC);
-    if(!$data) {
+    if(CheckId($dataJson["id"]) === "false") {
+        http_response_code(404);
         echo json_encode(["error_message" => "invalid id"]);
     }
     else {
@@ -70,16 +83,12 @@ elseif($method === "PUT") {
 elseif($method === "DELETE") {
     $data = file_get_contents("php://input");
     $dataJson = json_decode($data,true);
-    $query = $connection->prepare("SELECT * FROM user WHERE id = ?");
-    $query->execute([$dataJson["id"]]);
-    $data = $query->fetch(PDO::FETCH_ASSOC);
-    if(!$data) {
+    if($dataJson["id"] === "false") {
         echo json_encode(["error_message" => "invalid id"]);
     }
     else {
         $query = $connection->prepare("DELETE FROM user WHERE id = ?");
         $query->execute([$dataJson["id"]]);
         echo json_encode(["status" => "success"]);
-
     }
 }
