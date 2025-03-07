@@ -1,25 +1,14 @@
 <?php
 
 require './config/database_access.php';
-
-function CheckId($id) {
-    global $connection;
-    $query = $connection->prepare("SELECT * FROM user WHERE id = ?");
-    $query->execute([$id]);
-    $data = $query->fetch(PDO::FETCH_ASSOC);
-    if(!$data) {
-        return "false";
-    }
-    else {
-        return "true";
-    }
-}
+require './middleware/check_id.php';
 
 // test
 // echo CheckId("3") === "true" ? "done" : "false";   
 
 if($method  === "GET") {
-    if($id && $id !== 0) {
+    $id = filter_var($id, FILTER_VALIDATE_INT);
+    if($id) {
         $query = $connection ->prepare("SELECT username, now FROM user WHERE id = ?");
         $query -> execute([$id]);
         $user = $query->fetch(PDO::FETCH_ASSOC);
@@ -40,13 +29,14 @@ if($method  === "GET") {
 elseif($method === "POST") {
     $dataInsert = file_get_contents("php://input");
     $dataJson = json_decode($dataInsert, true);
-    if($data) {
+    if($dataJson) {
         $cheak = $connection->prepare("SELECT count(*) AS total_users FROM user WHERE username = ?");
         $cheak->execute([$dataJson["username"]]);
         $getCheckData = $cheak->fetch(PDO::FETCH_ASSOC);
         if(!$getCheckData["total_users"]) {
+            $encryptData = password_hash($dataJson["password"], PASSWORD_BCRYPT);
             $query = $connection->prepare("INSERT INTO `user`(`username`, `pass`) VALUES (?,?)");
-            $query->execute([$dataJson["username"], $dataJson["password"]]);
+            $query->execute([$dataJson["username"], $encryptData]);
             echo json_encode(["status" => "success", "message" => "insert success!"]);
         }
         else {
